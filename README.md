@@ -1,6 +1,14 @@
 Retina Entity Tagger
 ====================
 
+#What you need to install?
+Git
+MongoDB
+Python/Pip (winpython for windows)
+Numpy
+Nltk
+Beautiful Soup
+Requests
 
 # What is entity tagging? Why do it?
 Imagine a user searches for news about "Georgia." If we implement this by searching for articles with 
