@@ -10,7 +10,7 @@ Retina Entity Tagger
 - Beautiful Soup
 - Requests
 
-Guides on how to install all of these are under installation-guide (https://github.com/gt-big-data/installation-guide)
+Guides on how to install all of these are under [installation-guide](https://github.com/gt-big-data/installation-guide).
 
 # What is entity tagging? Why do it?
 Imagine a user searches for news about "Georgia." If we implement this by searching for articles with 
