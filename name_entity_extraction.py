@@ -11,11 +11,11 @@ def getNameEntities(text):
     for sentence in chunked_sentences:
         for part in sentence:
             if type(part) is nltk.Tree:
-                listPN = part.leaves()
+                entityTree = part.leaves()
                 entity = ""
-                for tuplePN in listPN:
+                for tuplePair in entityTree:
                     entity += " "
-                    entity += tuplePN[0]
+                    entity += tuplePair[0]
                 entity = entity[1:]
                 nameEntity.append(entity)
     nameEntity = list(set(nameEntity))
