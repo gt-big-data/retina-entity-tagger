@@ -4,17 +4,20 @@ import requests
 
 def lookup(name):
     service_url = 'https://www.googleapis.com/freebase/v1/search'
-    params = {
-              "id": None,
-              "query": name,
+    service_url = 'https://www.googleapis.com/freebase/v1/mqlread'
+    query = [{"id": None,
+              "name": name,
               "type": "/location/location",
               "/location/location/containedby": []
-            }
+            }]
+    params = {
+    'query': json.dumps(query)
+    }
     request = requests.get(service_url, params = params)
     response = json.loads(request.text)
-    #pp = pprint.PrettyPrinter(indent=4)
-    #pp.pprint(response['result'])
-    return response['result']
+    pp = pprint.PrettyPrinter(indent=4)
+    # pp.pprint(response['result'])
+    return response['result'][0]["/location/location/containedby"]
 
 def categorize(name):
   service_url = 'https://www.googleapis.com/freebase/v1/mqlread'
