@@ -50,6 +50,7 @@ def categorize(name):
     category = None
 
   return category
+  pp.pprint(response['result'][0])
 
 
 def indexTypes(results):
