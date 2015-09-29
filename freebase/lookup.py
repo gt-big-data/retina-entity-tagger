@@ -2,19 +2,34 @@ import json
 import pprint
 import requests
 
+def getId(name):
+  service_url = 'https://www.googleapis.com/freebase/v1/mqlread'
+  query = [{"id": None,
+    "name": name,
+    "type": []}]
+  params = {
+    'query': json.dumps(query)
+  }
+  request = requests.get(service_url, params = params)
+  response = json.loads(request.text)
+  response['result'][0]['id']
+
 def lookup(name):
     service_url = 'https://www.googleapis.com/freebase/v1/search'
-    params = {
-              "id": None,
-              "query": name,
+    service_url = 'https://www.googleapis.com/freebase/v1/mqlread'
+    query = [{"id": None,
+              "name": name,
               "type": "/location/location",
               "/location/location/containedby": []
-            }
+            }]
+    params = {
+    'query': json.dumps(query)
+    }
     request = requests.get(service_url, params = params)
     response = json.loads(request.text)
-    #pp = pprint.PrettyPrinter(indent=4)
-    #pp.pprint(response['result'])
-    return response['result']
+    pp = pprint.PrettyPrinter(indent=4)
+    # pp.pprint(response['result'])
+    return response['result'][0]["/location/location/containedby"]
 
 def categorize(name):
   service_url = 'https://www.googleapis.com/freebase/v1/mqlread'
@@ -27,11 +42,14 @@ def categorize(name):
   request = requests.get(service_url, params = params)
   response = json.loads(request.text)
   pp = pprint.PrettyPrinter(indent=4)
-  #pp.pprint(response['result'][0])
-  # print "verify"
-  # return response['result'][0]['type']
+  # pp.pprint(response['result'][0])
   # print response['result'][0]['type']
-  return indexTypes(response['result'][0]['type'])
+  try:
+    category = indexTypes(response['result'][0]['type']), response['result'][0]['id']
+  except Exception:
+    category = None
+
+  return category
 
 
 def indexTypes(results):
@@ -39,10 +57,12 @@ def indexTypes(results):
   mostCommonKey = '';
   mostCommonValue = 0;
   for objectType in results:
-    #print objectType
+    # print str(objectType)
     element = objectType.split('/')[1]
-    if element == 'base' or  element == 'user' or len(element) == 1:
+    if element == 'base' or len(element) == 1:
       objectType = objectType.split('/')[2]
+    elif element == 'user':
+      objectType = objectType.split('/')[3]
     else:
       objectType = objectType.split('/')[1]
     #print objectType
@@ -58,6 +78,9 @@ def indexTypes(results):
         mostCommonValue = dictionary[objectType]
   return mostCommonKey
 
-
-
+print open("article.json").read()
+json_data= json.loads(open("article.json").read())
+for entity in json_data[0]['entities']:
+  print entity
+  print categorize(entity)
 
