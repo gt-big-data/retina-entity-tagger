@@ -26,6 +26,6 @@ def most_common_entities(limit=1000):
     
     return output_dict    
 
-if __name__ == “__main__”:
-    a = mostCommonEntities()
+if __name__ == "__main__":
+    a = most_common_entities()
     print(a.items()[:5])
