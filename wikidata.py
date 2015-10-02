@@ -77,14 +77,12 @@ class WikidataEntityLookup(object):
             else:
                 returnIds[pId] = None
         return returnIds
+        """usage for propertyLookup
 
-
-"""usage for categorize
-
-data = WikidataEntityLookup()
-entityId = data
-print data.categorize("Q23556", ["P131", "P31", "P1231892731"])
-will return the property in a dictionary with the P# as the keys
-if there is no such property the key maps to None
-"""
+        data = WikidataEntityLookup()
+        entityId = data
+        print data.categorize("Q23556", ["P131", "P31", "P1231892731"])
+        will return the property in a dictionary with the P# as the keys
+        if there is no such property the key maps to None
+        """
 
