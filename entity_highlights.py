@@ -47,8 +47,6 @@ def main():
 
 		result = dict([(k.encode('utf-8'), v) for k, v in result.items()])
 		content = result['content']
-
-		result['content'] = None
 		entities = result['entities']
 		# Decodes entity names so python can work with them
 		entities = [e.decode('utf-8') for e in entities]
