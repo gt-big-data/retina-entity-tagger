@@ -21,7 +21,10 @@ def lookupNamedEntities(namedEntityTexts):
     for i in xrange(len(namedEntityTexts)):
         entity = namedEntityTexts[i]
         entity_info = wd.searchEntities(entity)
-        entity_info['text'] = entity
+        if entity_info is not None:
+            entity_info['text'] = entity
+        else:
+            entity_info = {'text': entity, 'id': '-1'} # -1 is no results from wikidata
         returned_list.append(entity_info)
         
     return returned_list
