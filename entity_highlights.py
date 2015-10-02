@@ -1,18 +1,18 @@
 from dbco import *
 from nltk.tokenize import sent_tokenize
-import re
 
 def create_sentences(content):
 	'''Divide content into sentences'''
 	sentences = sent_tokenize(content)
 	valid = []
-	for s in sentences:
+	for sentence in sentences:
 		
 		try:
 			# Decodes sentences names so python can work with them, removes newline characters
-			s = str(s).strip()
-			valid.append(s)
+			sentence = str(sentence).strip()
+			valid.append(sentence)
 
+			# If the sentence has some strange unicode character in it, we'll ignore it for now
 		except UnicodeEncodeError:
 			pass
 
@@ -20,21 +20,33 @@ def create_sentences(content):
 
 def get_highlighted_sentences(sentences, entities):
 	'''Takes in paragraphs of text and a list of entities, returns a list of the sentences in content in which any number of words in entitites shows'''
-	words_re = re.compile("|".join(entities))
 
 	highlights = []
 
 	for sentence in sentences:
+		matching_entities = []
+		found_match = False
 
-		for e in entities:
-			if e.lower() in sentence.lower():
-				highlights.append(sentence)
+		for entity in entities:
+			if entity.lower() in sentence.lower():
+				matching_entities.append(entity)
+				found_match = True
+
+		if found_match:
+			highlight = {
+			'sentence': sentence,
+			'entitites': matching_entities
+			}
+			print highlight
+			highlights.append(highlights)
 
 	return highlights
 
 def save_to_db(result, highlights):
 	doc_id = result["_id"]
-	db.qdoc.update( { "_id": doc_id },{"$set": {"highlights": highlights} } )
+	print doc_id
+	# print highlights
+	# db.qdoc.update( { "_id": doc_id },{"$set": {"highlights": highlights} } )
 
 
 # Gets results where we have entities
@@ -45,11 +57,11 @@ def main():
 
 	for result in results:
 
-		result = dict([(k.encode('utf-8'), v) for k, v in result.items()])
+		result = dict([(k.encode('utf-8'), v) for k, v in result.iteritems()])
 		content = result['content']
 		entities = result['entities']
 		# Decodes entity names so python can work with them
-		entities = [e.decode('utf-8') for e in entities]
+		entities = [entity.decode('utf-8') for entity in entities]
 
 		sentences = create_sentences(content)
 		highlights = get_highlighted_sentences(sentences, entities)
