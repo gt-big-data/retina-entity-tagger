@@ -32,15 +32,12 @@ class WikidataEntityLookup(object):
             }
             response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
             searchResult = json.loads(response.text)
-            if 'search' not in searchResult or not searchResult['search']:
-                return None
-    
-            # pick first one, for now
-            bestResult = searchResult['search'][0]
-            if 'id' not in bestResult:
-                return None
-    
-            self.cache[entityText] = bestResult['id']
+            id_ = None
+            if 'search' in searchResult and searchResult['search'] and\
+                'id' in searchResult['search'][0]:
+                id_ = searchResult['search'][0]['id']
+            
+            self.cache[entityText] = id_;
         return self.cache[entityText]
 
     def getEntity(self, entityId):
