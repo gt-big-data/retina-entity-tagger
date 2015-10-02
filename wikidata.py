@@ -1,4 +1,5 @@
 import requests
+import pprint
 import json
 
 class WikidataEntityLookup(object):
@@ -19,9 +20,7 @@ class WikidataEntityLookup(object):
         - entityText Text to search for an entity match.
 
         Output:
-        If there was a wikidata match, returns a dictionary of 'entityText', 'id', where
-        - 'id' is the wikidata id of the entity
-
+        If there was a wikidata match, returns id of the text
         If there was no entity match, returns None
         '''
         if entityText not in self.cache:
@@ -42,7 +41,7 @@ class WikidataEntityLookup(object):
                 return None
     
             self.cache[entityText] = bestResult['id']
-        return 
+        return self.cache[entityText]
 
     def getEntity(self, entityId):
         params = {
@@ -54,10 +53,33 @@ class WikidataEntityLookup(object):
         response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
         entityResult = json.loads(response.text)
         synonyms = entityResult['entities'][entityId]['aliases']
-
-        # FOR PLACES: 
+        # FOR PLACES:
         # P131 = contained by
         # P625 = geo coordinates
         return entityResult
-        
 
+    def propertyLookup(self, entityId, propertyId):
+        """usage for propertyLookup
+
+        data = WikidataEntityLookup()
+        entityId = data
+        print data.categorize("Q23556", ["P131", "P31", "P1231892731"])
+        will return the property in a dictionary with the P# as the keys
+        if there is no such property the key maps to None
+        """
+        params = params = {
+            'action': 'wbgetentities',
+            'languages': 'en',
+            'format': 'json',
+            'ids': '|'.join([entityId])
+        }
+        response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
+        entityResult = json.loads(response.text)
+        # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
+        returnIds = {}
+        for pId in propertyId:
+            if pId in entityResult['entities'][entityId]['claims']:
+                returnIds[pId] = 'Q'+str(entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']['numeric-id'])
+            else:
+                returnIds[pId] = None
+        return returnIds

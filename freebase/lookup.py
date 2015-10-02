@@ -79,9 +79,9 @@ def indexTypes(results):
         mostCommonValue = dictionary[objectType]
   return mostCommonKey
 
-print open("article.json").read()
-json_data= json.loads(open("article.json").read())
-for entity in json_data[0]['entities']:
-  print entity
-  print categorize(entity)
+# print open("article.json").read()
+# json_data= json.loads(open("article.json").read())
+# for entity in json_data[0]['entities']:
+#   print entity
+#   print categorize(entity)
 
