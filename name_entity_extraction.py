@@ -16,7 +16,15 @@ def lookupNamedEntities(namedEntityTexts):
         {'text': 'New York State', 'id': 'Q1380', 'description': 'state in us..'}, ..
     ]
     '''
-    return namedEntityTexts
+    returned_list = []    
+    
+    for i in xrange(len(namedEntityTexts)):
+        entity = namedEntityTexts[i]
+        entity_info = wd.searchEntities(entity)
+        entity_info['text'] = entity
+        returned_list.append(entity_info)
+        
+    return returned_list
 
 def getNameEntities(text):
     sentences = nltk.sent_tokenize(text)
