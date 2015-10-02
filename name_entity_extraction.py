@@ -1,5 +1,22 @@
 import nltk
+from wikidata import WikidataEntityLookup
 from dbco import *
+
+wd = WikidataEntityLookup()
+def lookupNamedEntities(namedEntityTexts):
+    '''
+    Given list of texts that correspond to named entities,
+    return a list of dictionaries, where each dict has 
+    the original text, entity id, and description.
+
+    Example usage:
+    lookupNamedEntities(['NYC', 'New York State', 'USA'])
+    should return [
+        {'text': 'NYC', 'id': 'Q60', 'description': 'city in state of New York...'},
+        {'text': 'New York State', 'id': 'Q1380', 'description': 'state in us..'}, ..
+    ]
+    '''
+    return namedEntityTexts
 
 def getNameEntities(text):
     sentences = nltk.sent_tokenize(text)
@@ -19,7 +36,7 @@ def getNameEntities(text):
                 entity = entity[1:]
                 nameEntity.append(entity)
     nameEntity = list(set(nameEntity))
-    return nameEntity
+    return lookupNamedEntities(nameEntity)
 
 # def entityTester():
 #     with open("small_sample_articles.json") as f:
@@ -36,4 +53,5 @@ def tagEntities():
     for a in articles:
         db.qdoc.update( { "_id": a['_id'] },{"$set": {"entities": getNameEntities(a['content'] ) } } )
 
-tagEntities()
+if __name__ == "__main__":
+    tagEntities()
