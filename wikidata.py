@@ -1,9 +1,16 @@
 import requests
 import pprint
 import json
+import math
 
 class WikidataEntityLookup(object):
     BASE_URL = 'http://www.wikidata.org/w/api.php'
+    COMMON_PROP = {
+        "Contained By" : "P131",
+        "Instance of" : "P31",
+        "Head of State" : "P6",
+        "Legislative Body" : "P1"
+    }
 
     def searchEntities(self, entityText):
         '''
@@ -72,8 +79,11 @@ class WikidataEntityLookup(object):
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
         returnIds = {}
         for pId in propertyId:
-            if pId in entityResult['entities'][entityId]['claims'].keys():
+            if pId in entityResult['entities'][entityId]['claims'].keys() \
+               and "numeric-id" in entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value'].keys():
                 returnIds[pId] = 'Q'+str(entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']['numeric-id'])
+            elif pId in entityResult['entities'][entityId]['claims'].keys():
+                returnIds[pId] = entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']
             else:
                 returnIds[pId] = None
         return returnIds
@@ -81,8 +91,31 @@ class WikidataEntityLookup(object):
 
         data = WikidataEntityLookup()
         entityId = data
-        print data.categorize("Q23556", ["P131", "P31", "P1231892731"])
+        print data.propertyLookup("Q23556", ["P131", "P31", "P1231892731"])
         will return the property in a dictionary with the P# as the keys
         if there is no such property the key maps to None
         """
+
+
+    def locDistance(self, entityId1, entityId2):
+        Radius = 3963.19
+        Error = 1.15
+        entityId1 = self.propertyLookup(entityId1, ["P625"])["P625"]
+        entityId2 = self.propertyLookup(entityId2, ["P625"])["P625"]
+        long1 = math.radians(float(entityId1["longitude"]))
+        lat1 = math.radians(float(entityId1["latitude"]))
+        long2 = math.radians(float(entityId2["longitude"]))
+        lat2 = math.radians(float(entityId2["latitude"]))
+        dLong = long2 - long1
+        dLat = lat2 - lat1
+        a = math.sin(dLat/2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dLong/2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        return Error * Radius * c
+
+data = WikidataEntityLookup()
+entityId = data
+# print data.propertyLookup("Q23556", [WikidataEntityLookup.COMMON_PROP["Contained By"], WikidataEntityLookup.COMMON_PROP["Instance of"], "P194", "P625"]).keys()
+print data.locDistance("Q62", "Q23556")
+
+
 
