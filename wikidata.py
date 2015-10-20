@@ -9,7 +9,8 @@ class WikidataEntityLookup(object):
         "Contained By" : "P131",
         "Instance of" : "P31",
         "Head of State" : "P6",
-        "Legislative Body" : "P1"
+        "Legislative Body" : "P1",
+        "GeoLocation" : "P625"
     }
 
     def searchEntities(self, entityText):
@@ -52,7 +53,19 @@ class WikidataEntityLookup(object):
             'description': bestResult['description'] if 'description' in bestResult else '',
         }
 
-    def getEntity(self, entityId):
+    def getTitle(self, QId):
+        params = {
+            'action': 'wbgetentities',
+            'languages': 'en',
+            'format': 'json',
+            'ids': '|'.join([entityId]) # pipe separate for multiple ids
+        }
+        response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
+        entityResult = json.loads(response.text)
+        print entityResult['entities'][QId]['labels']['en']['value']
+
+
+    def getAliases(self, entityId):
         params = {
             'action': 'wbgetentities',
             'languages': 'en',
@@ -79,10 +92,10 @@ class WikidataEntityLookup(object):
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
         returnIds = {}
         for pId in propertyId:
-            if pId in entityResult['entities'][entityId]['claims'].keys() \
-               and "numeric-id" in entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value'].keys():
+            if pId in entityResult['entities'][entityId]['claims'] \
+               and "numeric-id" in entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']:
                 returnIds[pId] = 'Q'+str(entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']['numeric-id'])
-            elif pId in entityResult['entities'][entityId]['claims'].keys():
+            elif pId in entityResult['entities'][entityId]['claims']:
                 returnIds[pId] = entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']
             else:
                 returnIds[pId] = None
