@@ -3,7 +3,7 @@ from name_entity_extraction import *
 
 #updates entities to wikidata ids
 def updateEntities(limit=1000):
-    articles = db.qdoc.find({ "$query": { "entities1": { "$exists": True } }, "$orderby": { '_id' : 1 } }).limit(limit)
+    articles = db.qdoc.find({ "$query": { "entities": { "$exists": True } }, "$orderby": { '_id' : 1 } }).limit(limit)
     for a in articles:
         entities = a['entities']
         updated = isUpdated(entities)
