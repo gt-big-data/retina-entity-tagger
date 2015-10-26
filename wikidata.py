@@ -80,13 +80,17 @@ class WikidataEntityLookup(object):
         # P625 = geo coordinates
         return synonyms
 
-    def propertyLookup(self, entityId, propertyId):
+    def propertyLookup(self, entityId, properties):
         params = params = {
             'action': 'wbgetentities',
             'languages': 'en',
             'format': 'json',
             'ids': '|'.join([entityId])
         }
+        propertyId = []
+        for key in properties:
+            if key in WikidataEntityLookup.COMMON_PROP:
+                propertyId.append(WikidataEntityLookup.COMMON_PROP[key])
         response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
         entityResult = json.loads(response.text)
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
