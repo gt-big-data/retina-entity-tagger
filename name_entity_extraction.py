@@ -44,7 +44,6 @@ def getNameEntities(text):
                 nameEntity.append(entity)
     nameEntity = list(set(nameEntity))
     entities = lookupNamedEntities(nameEntity)
-    storeEntities(entities)
     return entities
 
 # def entityTester():
@@ -61,16 +60,6 @@ def tagEntities():
     articles = getArticlesNoEntities()
     for a in articles:
         db.qdoc.update( { "_id": a['_id'] },{"$set": {"entities": getNameEntities(a['content'] ) } } )
-
-def storeEntities(entities):
-    for a in entities:
-        if db.entities.find({"_id":a}).count() == 0:
-            properties = wd.propertyLookup(a, ["P31", "P131"])
-            nonNullProperties = []
-            for key, value in properties:
-                if value is not None:
-                    nonNullProperties[key] = value
-            db.entities.insert_one({"_id": a, "Title":wd.getTitle(a), "Aliases": wd.getAliases(a), "Properties": nonNullProperties})
 
 if __name__ == "__main__":
     tagEntities()

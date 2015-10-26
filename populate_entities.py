@@ -1,5 +1,6 @@
 from dbco import *
 from collections import defaultdict
+import wikidata as wd
 
 def find_qdocs_with_entities(limit=10):
 	'''Returns a set with all the entities used in discovered articles'''
@@ -22,6 +23,17 @@ def find_qdocs_with_entities(limit=10):
 	print cleaned_entities
 
 	return cleaned_entities
+
+def storeEntities(entities):
+	desiredProperties = [wd.PROP_INSTANCEOF, wd.PROP_INSTANCEOF]
+    for entity in entities:
+        if db.entities.find({"_id": entity}).count() == 0:
+            properties = wd.propertyLookup(entity, desiredProperties)
+            nonNullProperties = []
+            for key, value in properties:
+                if value is not None:
+                    nonNullProperties[key] = value
+            db.entities.insert_one({"_id": entity, "Title": wd.getTitle(entity), "Aliases": wd.getAliases(entity), "Properties": nonNullProperties})
 
 
 def find_wikidata_entity_info(entities):
