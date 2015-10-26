@@ -3,16 +3,15 @@ from collections import defaultdict
 
 def find_qdocs_with_entities(limit=10):
 	'''Returns a set with all the entities used in discovered articles'''
-	
-	# Find all articles that have an entities field
-	articles = db.qdoc.find({ "$query": { "entities": { "$exists": True } },
-		"$orderby": { '_id' : -1 } },{ "entities": 1}).limit(limit)
 
-	# Conventient lambda function to creat sets of entities from the articles
-	getEntitySets = lambda article: set(article['entities'])
+	articles = db.qdoc.find(
+		{ "$query": { "entities": { "$exists": True } },  # Find all articles that have an entities field
+		"$orderby": { '_id' : -1 } },  # Sort by latest entries
+		{ "entities": 1}  # Only want to get back the entities fields for these articles
+		).limit(limit)
 
-	# Given articles, returns a list of sets which hold the entities from a given article
-	entitySets = map(getEntitySets, articles)
+	# Map articles to sets of their entities
+	entitySets = map(lambda article: set(article['entities']), articles)
 
 	# Union all the sets of entities togeter, get one set of all entities found
 	entities = set().union(*entitySets)
@@ -54,5 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-	
