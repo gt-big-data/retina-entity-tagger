@@ -104,14 +104,41 @@ class WikidataEntityLookup(object):
             else:
                 returnIds[pId] = None
         return returnIds
-        """usage for propertyLookup
 
-        data = WikidataEntityLookup()
-        entityId = data
-        print data.propertyLookup("Q23556", ["P131", "P31", "P1231892731"])
-        will return the property in a dictionary with the P# as the keys
-        if there is no such property the key maps to None
-        """
+
+    def getData(self, entityId, properties):
+        params = {
+            'action': 'wbgetentities',
+            'languages': 'en',
+            'format': 'json',
+            'ids': '|'.join([entityId]) # pipe separate for multiple ids
+        }
+        """gets all the data for a single entity id"""
+        response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
+        entityResult = json.loads(response.text)
+
+        title = entityResult['entities'][entityId]['labels']['en']['value']
+        alias = entityResult['entities'][entityId]['aliases']
+
+        """converts property text to property keys"""
+        propertyId = []
+        for key in properties:
+            if key in WikidataEntityLookup.COMMON_PROP:
+                propertyId.append(WikidataEntityLookup.COMMON_PROP[key])
+        returnIds = {}
+
+        """lookup each property in the results"""
+        for pId in propertyId:
+            """if property exists and is has a numeric value"""
+            if pId in entityResult['entities'][entityId]['claims'] \
+               and "numeric-id" in entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']:
+                returnIds[pId] = 'Q'+str(entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']['numeric-id'])
+            """if property exists but has a data value"""
+            elif pId in entityResult['entities'][entityId]['claims']:
+                returnIds[pId] = entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']
+        return (title, alias, returnIds)
+
+
 
 
     def locDistance(self, entityId1, entityId2):
@@ -132,7 +159,7 @@ class WikidataEntityLookup(object):
 data = WikidataEntityLookup()
 entityId = data
 # print data.propertyLookup("Q23556", [WikidataEntityLookup.COMMON_PROP["Contained By"], WikidataEntityLookup.COMMON_PROP["Instance of"], "P194", "P625"]).keys()
-print data.locDistance("Q62", "Q23556")
+print data.getData("Q62", ["Contained By", "Instance Of", "P1231892731"])
 
 
 
