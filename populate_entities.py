@@ -2,7 +2,7 @@ from dbco import *
 from collections import defaultdict
 import wikidata as wd
 
-def find_qdocs_with_entities(limit=10):
+def find_entity_ids_from_qdocs(limit=10):
 	'''Returns a set with all the entities used in discovered articles'''
 
 	articles = db.qdoc.find(
@@ -17,51 +17,60 @@ def find_qdocs_with_entities(limit=10):
 	# Union all the sets of entities togeter, get one set of all entities found
 	entities = set().union(*entitySets)
 
+	# Ensure no None values in our entities
+	entities.discard(None)
+
 	# Converts each entity from unicode to str
-	cleaned_entities = {str(entity) for entity in entities}
+	cleaned_entity_ids = {str(entity) for entity in entities}
 
-	print cleaned_entities
-
-	return cleaned_entities
+	return cleaned_entity_ids
 
 def storeEntities(entities):
 	desiredProperties = [wd.PROP_INSTANCEOF, wd.PROP_INSTANCEOF]
-    for entity in entities:
-        if db.entities.find({"_id": entity}).count() == 0:
-            properties = wd.propertyLookup(entity, desiredProperties)
-            nonNullProperties = []
-            for key, value in properties:
-                if value is not None:
-                    nonNullProperties[key] = value
-            db.entities.insert_one({"_id": entity, "Title": wd.getTitle(entity), "Aliases": wd.getAliases(entity), "Properties": nonNullProperties})
+	for entity in entities:
+		if db.entities.find({"_id": entity}).count() == 0:
+		    properties = wd.propertyLookup(entity, desiredProperties)
+		    nonNullProperties = []
+		    for key, value in properties:
+		        if value is not None:
+		            nonNullProperties[key] = value
+		    db.entities.insert_one({"_id": entity, "Title": wd.getTitle(entity), "Aliases": wd.getAliases(entity), "Properties": nonNullProperties})
 
 
-def find_wikidata_entity_info(entities):
+def find_wikidata_entity_info(entityIds):
 
-	# {
-	#     $id: 'Q60',
-	#     description: 'city in new york; most populous city; ...',
-	#     properties:  [
-	#         {propid: 'P131', propname: 'containedby', propvalue: 'Q1384'},
-	#         {propid: 'P625', propname: 'geocoords', propvalue: {latitude: 50, longitude: -30}}
-	#     ]
-	# }
-
-	entry = lambda: {'id': None, 'description': None, 'properties': []}
-	prop = lambda: {'propid': None, 'propname': None, 'containedby': None, 'propvalue': None}
-
-
+	desiredProperties = [
+	wd.PROP_CONTAINEDBY,
+	# wd.PROP_INSTANCEOF,
+	# wd.PROP_HEADOFSTATE,
+	# wd.PROP_LEGISLATIVEBODY,
+	wd.PROP_GEOLOCATION,
+	]
 
 	entries = {}
 
-	for entity in entities:
-		pass
+	wd_lookup = wd.WikidataEntityLookup()
 
+	entities = []
 
+	for entityId in entityIds:
+		properties = wd_lookup.find_properties(entityId, desiredProperties)
+		useful_properties = [prop for prop in properties if prop]
+
+		entity = {}
+		entity['properties'] = useful_properties
+		entity['description'] = ''
+		entity['$id'] = entityId
+
+		entities.append(entity)
+
+	return entities
 
 
 def main():
-	find_qdocs_with_entities(1)
+	entity_ids = find_entity_ids_from_qdocs(1)
+	updated_entities = find_wikidata_entity_info(entity_ids)
+
 
 if __name__ == "__main__":
     main()
