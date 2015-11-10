@@ -26,51 +26,52 @@ def find_entity_ids_from_qdocs(limit=10):
 	return cleaned_entity_ids
 
 def storeEntities(entities):
-	desiredProperties = [wd.PROP_INSTANCEOF, wd.PROP_INSTANCEOF]
-	for entity in entities:
-		if db.entities.find({"_id": entity}).count() == 0:
-		    properties = wd.propertyLookup(entity, desiredProperties)
-		    nonNullProperties = []
-		    for key, value in properties:
-		        if value is not None:
-		            nonNullProperties[key] = value
-		    db.entities.insert_one({"_id": entity, "Title": wd.getTitle(entity), "Aliases": wd.getAliases(entity), "Properties": nonNullProperties})
+   db.entities.insert(entities)
 
 
 def find_wikidata_entity_info(entityIds):
 
 	desiredProperties = [
-	wd.PROP_CONTAINEDBY,
-	# wd.PROP_INSTANCEOF,
-	# wd.PROP_HEADOFSTATE,
-	# wd.PROP_LEGISLATIVEBODY,
-	wd.PROP_GEOLOCATION,
+		wd.PROP_INSTANCEOF,
+		wd.PROP_CONTAINEDBY,
+		wd.PROP_GEOLOCATION,
+		# wd.PROP_HEADOFSTATE,
+		# wd.PROP_LEGISLATIVEBODY,
 	]
 
 	entries = {}
 
 	wd_lookup = wd.WikidataEntityLookup()
 
-	entities = []
-
 	for entityId in entityIds:
-		properties = wd_lookup.find_properties(entityId, desiredProperties)
-		useful_properties = [prop for prop in properties if prop]
+		entity = wd_lookup.lookupEntityById(entityId, desiredProperties)
+		if not entity:
+			print 'No entity for', entityId
+			continue
+		entityDoc = {}
+		entityDoc['_id'] = entity['id']
+		entityDoc['aliases'] = entity['aliases']
+		entityDoc['title'] = entity['title']
+		entityDoc['properties'] = entity['properties']
+		yield entityDoc
 
-		entity = {}
-		entity['properties'] = useful_properties
-		entity['description'] = ''
-		entity['$id'] = entityId
 
-		entities.append(entity)
-
-	return entities
+def entities_in_db():
+	return set(str(doc['_id']) for doc in db.entities.find({}, {'_id': 1}))
 
 
 def main():
-	entity_ids = find_entity_ids_from_qdocs(1)
-	updated_entities = find_wikidata_entity_info(entity_ids)
+	stored_entities = entities_in_db()
+	entity_ids = find_entity_ids_from_qdocs(limit=10)
+	buf = []
+	for entity in find_wikidata_entity_info(entity_ids - stored_entities):
+		buf.append(entity)
+		if len(buf) >= 10:
+			storeEntities(buf)
+			buf = []
 
+	if buf:
+		storeEntities(buf)
 
 if __name__ == "__main__":
     main()
