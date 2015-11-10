@@ -1,12 +1,37 @@
 import requests
 import pprint
 import json
+import math
+
+# Properties
+PROP_CONTAINEDBY = "Contained By"
+PROP_INSTANCEOF  = "Instance of"
+PROP_HEADOFSTATE = "Head of State"
+PROP_LEGISLATIVEBODY = "Legislative Body"
+PROP_GEOLOCATION = "GeoLocation"
+
+ID_CONTAINEDBY = "P131"
+ID_INSTANCEOF = "P31"
+ID_HEADOFSTATE = "P6"
+ID_LEGISLATIVEBODY = "P1"
+ID_GEOLOCATION = "P625"
 
 class WikidataEntityLookup(object):
     BASE_URL = 'http://www.wikidata.org/w/api.php'
+
+    COMMON_PROPERTIES = {
+        PROP_CONTAINEDBY : ID_CONTAINEDBY,
+        PROP_INSTANCEOF : ID_INSTANCEOF,
+        PROP_HEADOFSTATE : ID_HEADOFSTATE,
+        PROP_LEGISLATIVEBODY : ID_LEGISLATIVEBODY,
+        PROP_GEOLOCATION : ID_GEOLOCATION
+    }
+
+    IDS_TO_PROPERTIES = {value: key for key, value in COMMON_PROPERTIES.iteritems()}
+
     def __init__(self):
-        self.cache = {}
-        
+        pass
+
     def searchEntities(self, entityText):
         '''
         Search wikidata for entities described by the text entityText.
@@ -20,63 +45,105 @@ class WikidataEntityLookup(object):
         - entityText Text to search for an entity match.
 
         Output:
-        If there was a wikidata match, returns id of the text
+        If there was a wikidata match, returns a dictionary of 'id', 'description', where
+        - 'id' is the wikidata id of the entity
+        - 'description' is the description of the entity, if one exists.
+
         If there was no entity match, returns None
         '''
-        if entityText not in self.cache:
-            params = {
-                'action': 'wbsearchentities',
-                'language': 'en',
-                'format': 'json',
-                'search': entityText
-            }
-            response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
-            searchResult = json.loads(response.text)
-            id_ = None
-            if 'search' in searchResult and searchResult['search'] and\
-                'id' in searchResult['search'][0]:
-                id_ = searchResult['search'][0]['id']
-            
-            self.cache[entityText] = id_;
-        return self.cache[entityText]
-
-    def getEntity(self, entityId):
         params = {
-            'action': 'wbgetentities',
-            'languages': 'en',
+            'action': 'wbsearchentities',
+            'language': 'en',
             'format': 'json',
-            'ids': '|'.join([entityId]) # pipe separate for multiple ids
+            'search': entityText
         }
         response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
-        entityResult = json.loads(response.text)
-        synonyms = entityResult['entities'][entityId]['aliases']
-        # FOR PLACES:
-        # P131 = contained by
-        # P625 = geo coordinates
-        return entityResult
+        searchResult = json.loads(response.text)
+        if 'search' not in searchResult or not searchResult['search']:
+            return None
 
-    def propertyLookup(self, entityId, propertyId):
-        """usage for propertyLookup
+        # pick first one, for now
+        bestResult = searchResult['search'][0]
+        if 'id' not in bestResult:
+            return None
 
-        data = WikidataEntityLookup()
-        entityId = data
-        print data.categorize("Q23556", ["P131", "P31", "P1231892731"])
-        will return the property in a dictionary with the P# as the keys
-        if there is no such property the key maps to None
+        return {
+            'id': bestResult['id'],
+            'description': bestResult['description'] if 'description' in bestResult else '',
+        }
+
+    def getTitle(self, entityInformation):
+        if 'labels' in entityInformation and 'en' in entityInformation['labels'] and 'value' in entityInformation['labels']['en']:
+            return entityInformation['labels']['en']['value']
+        return None
+
+
+    def getAliases(self, entityInformation):
+        return entityInformation['aliases'] if 'aliases' in entityInformation else None
+
+    def lookupEntityById(self, entityId, properties):
         """
-        params = params = {
+        entityId, the entityId to look up
+        properties, a collection of human-readable properties to look for
+        """
+        params = {
             'action': 'wbgetentities',
             'languages': 'en',
             'format': 'json',
             'ids': '|'.join([entityId])
         }
+
+        propertyIds = []
+
+        for key in properties:
+            if key in WikidataEntityLookup.COMMON_PROPERTIES:
+                propertyIds.append(WikidataEntityLookup.COMMON_PROPERTIES[key])
+
         response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
         entityResult = json.loads(response.text)
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
-        returnIds = {}
-        for pId in propertyId:
-            if pId in entityResult['entities'][entityId]['claims']:
-                returnIds[pId] = 'Q'+str(entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']['numeric-id'])
-            else:
-                returnIds[pId] = None
-        return returnIds
+        
+        entities = entityResult['entities']
+
+        if entityId not in entities:
+            return None
+
+        entity = {
+            'id': entityId,
+            'title': self.getTitle(entities[entityId]),
+            'aliases': self.getAliases(entities[entityId]),
+            'properties': self.getProperties(entities[entityId], properties),
+        }
+
+        return entity
+
+    def getProperties(self, entityInformation, propertyNames):
+        properties = {}
+        for propName in propertyNames:
+            propId = WikidataEntityLookup.COMMON_PROPERTIES[propName]
+            value = self.get_property_value(entityInformation, propId)
+            if value:
+                properties[propName] = {
+                    'value': value,
+                    'wd_id': propId,
+                }
+        return properties
+        
+
+
+    def get_property_value(self, entityInformation, propertyId):
+        try:            
+            claims_for_entity_id = entityInformation['claims']
+            values_for_property_id = claims_for_entity_id[propertyId][0]
+            main_values_for_property_id = values_for_property_id['mainsnak']
+
+            data_values = main_values_for_property_id['datavalue']
+            if 'numeric-id' in data_values:
+                return 'Q' + str(data_values['numeric-id'])
+            elif 'value' in data_values:
+                return data_values['value']
+        except KeyError:
+            return None
+
+data = WikidataEntityLookup()
+entityId = data
