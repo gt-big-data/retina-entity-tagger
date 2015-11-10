@@ -6,7 +6,7 @@ wd = WikidataEntityLookup()
 def lookupNamedEntities(namedEntityTexts):
     '''
     Given list of texts that correspond to named entities,
-    return a list of dictionaries, where each dict has 
+    return a list of dictionaries, where each dict has
     the original text, entity id, and description.
 
     Example usage:
@@ -16,13 +16,13 @@ def lookupNamedEntities(namedEntityTexts):
         {'text': 'New York State', 'id': 'Q1380', 'description': 'state in us..'}, ..
     ]
     '''
-    returned_list = []    
-    
+    returned_list = []
+
     for i in xrange(len(namedEntityTexts)):
         entity = namedEntityTexts[i]
         entityId = wd.searchEntities(entity)
         returned_list.append(entityId)
-        
+
     return returned_list
 
 def getNameEntities(text):
@@ -43,7 +43,8 @@ def getNameEntities(text):
                 entity = entity[1:]
                 nameEntity.append(entity)
     nameEntity = list(set(nameEntity))
-    return lookupNamedEntities(nameEntity)
+    entities = lookupNamedEntities(nameEntity)
+    return entities
 
 # def entityTester():
 #     with open("small_sample_articles.json") as f:
