@@ -3,15 +3,34 @@ import pprint
 import json
 import math
 
+# Properties
+PROP_CONTAINEDBY = "Contained By"
+PROP_INSTANCEOF  = "Instance of"
+PROP_HEADOFSTATE = "Head of State"
+PROP_LEGISLATIVEBODY = "Legislative Body"
+PROP_GEOLOCATION = "GeoLocation"
+
+ID_CONTAINEDBY = "P131"
+ID_INSTANCEOF = "P31"
+ID_HEADOFSTATE = "P6"
+ID_LEGISLATIVEBODY = "P1"
+ID_GEOLOCATION = "P625"
+
 class WikidataEntityLookup(object):
     BASE_URL = 'http://www.wikidata.org/w/api.php'
-    COMMON_PROP = {
-        "Contained By" : "P131",
-        "Instance of" : "P31",
-        "Head of State" : "P6",
-        "Legislative Body" : "P1",
-        "GeoLocation" : "P625"
+
+    COMMON_PROPERTIES = {
+        PROP_CONTAINEDBY : ID_CONTAINEDBY,
+        PROP_INSTANCEOF : ID_INSTANCEOF,
+        PROP_HEADOFSTATE : ID_HEADOFSTATE,
+        PROP_LEGISLATIVEBODY : ID_LEGISLATIVEBODY,
+        PROP_GEOLOCATION : ID_GEOLOCATION
     }
+
+    IDS_TO_PROPERTIES = {value: key for key, value in COMMON_PROPERTIES.iteritems()}
+
+    def __init__(self):
+        pass
 
     def searchEntities(self, entityText):
         '''
@@ -80,17 +99,25 @@ class WikidataEntityLookup(object):
         # P625 = geo coordinates
         return synonyms
 
-    def propertyLookup(self, entityId, properties):
-        params = params = {
+    def find_properties(self, entityId, properties):
+        """
+        entityId, the entityId to look up
+        properties, a collection of human-readable properties to look for
+        """
+
+        params = {
             'action': 'wbgetentities',
             'languages': 'en',
             'format': 'json',
             'ids': '|'.join([entityId])
         }
-        propertyId = []
+
+        propertyIds = []
+
         for key in properties:
-            if key in WikidataEntityLookup.COMMON_PROP:
-                propertyId.append(WikidataEntityLookup.COMMON_PROP[key])
+            if key in WikidataEntityLookup.COMMON_PROPERTIES:
+                propertyIds.append(WikidataEntityLookup.COMMON_PROPERTIES[key])
+
         response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
         entityResult = json.loads(response.text)
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
@@ -138,28 +165,42 @@ class WikidataEntityLookup(object):
                 returnIds[pId] = entityResult['entities'][entityId]['claims'][pId][0]['mainsnak']['datavalue']['value']
         return (title, alias, returnIds)
 
+    def get_property_value(propertyId, entityResult):
+        try:
+            results_for_entity_id = entityResult[entityId]
+            claims_for_entity_id = results_for_entity_id['claims']
+            values_for_property_id = claims_for_entity_id[propertyId][0]
+            main_values_for_property_id = values_for_property_id['mainsnak']
+
+            data_values = main_values_for_property_id['datavalue']
+                if 'numeric-id' in data_values.keys():
+                    return 'Q' + str(data_values['numeric-id'])
+                elif 'value' in data_values.keys():
+                    return data_values['value']
+            except KeyError:
+                pass
+            return None
+
+        discovered_properties = []
+
+        for propertyId in propertyIds:
+            propvalue = get_property_value(propertyId, entityResult)
+
+            if propvalue and propertyId == ID_GEOLOCATION:
+                propvalue.pop("globe", None)
+                propvalue.pop("precision", None)
 
 
+            if propvalue:
+                prop = {
+                'propid': propertyId,
+                'propname': self.IDS_TO_PROPERTIES[propertyId],
+                'propvalue': propvalue
+                }
 
-    def locDistance(self, entityId1, entityId2):
-        Radius = 3963.19
-        Error = 1.15
-        entityId1 = self.propertyLookup(entityId1, ["P625"])["P625"]
-        entityId2 = self.propertyLookup(entityId2, ["P625"])["P625"]
-        long1 = math.radians(float(entityId1["longitude"]))
-        lat1 = math.radians(float(entityId1["latitude"]))
-        long2 = math.radians(float(entityId2["longitude"]))
-        lat2 = math.radians(float(entityId2["latitude"]))
-        dLong = long2 - long1
-        dLat = lat2 - lat1
-        a = math.sin(dLat/2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dLong/2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-        return Error * Radius * c
+                discovered_properties.append(prop)
+
+        return discovered_properties
 
 data = WikidataEntityLookup()
 entityId = data
-# print data.propertyLookup("Q23556", [WikidataEntityLookup.COMMON_PROP["Contained By"], WikidataEntityLookup.COMMON_PROP["Instance of"], "P194", "P625"]).keys()
-print data.getData("Q62", ["Contained By", "Instance Of", "P1231892731"])
-
-
-
