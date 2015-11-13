@@ -21,16 +21,16 @@ def lookupNamedEntities(namedEntityTexts):
     ]
     '''
     returned_list = []
-    
+
     for i in xrange(len(namedEntityTexts)):
         entity = namedEntityTexts[i]
         entityId = wd.searchEntities(entity)
-        returned_list.append(entityId)
-        
+        if entityId != None and entityId not in returned_list:
+            returned_list.append(entityId)
     return returned_list
 
 def getNameEntities(text):
-    
+
 ### BELOW IS COMMENTED TO TEST THE SPACY METHOD
 #    sentences = nltk.sent_tokenize(text)
 #    tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
@@ -49,7 +49,7 @@ def getNameEntities(text):
 #                entity = entity[1:]
 #                nameEntity.append(entity)
 #    nameEntity = list(set(nameEntity))
-    
+
     nameEntity = spcy.get_entities_spacy(text) # THE SPACY METHOD
 
     return lookupNamedEntities(nameEntity)
