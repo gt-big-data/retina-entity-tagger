@@ -9,7 +9,7 @@ def find_entity_ids_from_qdocs(limit=10):
 		"$query": {
 			"entities": {
 				"$exists": True,
-				"$elemMatch": { "$type": 2, "$regex": r"^Q\d+" },
+				"$elemMatch": { "$regex": r"^Q\d+" },
  			},
  		},
 		"$orderby": { '_id' : -1 }
@@ -21,7 +21,8 @@ def find_entity_ids_from_qdocs(limit=10):
 	entity_ids = set([])
 	for article in articles:
 		for entity in article['entities']:
-			entity_ids.add(entity)
+			if entity and entity.startswith('Q'):
+				entity_ids.add(entity)
 
 	# Ensure no None values in our entities
 	entity_ids.discard(None)
@@ -47,13 +48,17 @@ def find_wikidata_entity_info(entityIds):
 		# wd.PROP_LEGISLATIVEBODY,
 	]
 
+	for entity in entityIds:
+		if not entity.startswith('Q'):
+			raise Exception('Invalid entity ' + entity)
+
 	entries = {}
 
 	wd_lookup = wd.WikidataEntityLookup()
 
 	for entityId in entityIds:
 		if not entityId.startswith('Q'):
-			import ipdb;ipdb.set_trace()
+			continue
 
 		entity = wd_lookup.lookupEntityById(entityId, desiredProperties)
 		if not entity:
@@ -78,7 +83,7 @@ def main():
 	print 'Found', len(entity_ids), 'to fetch'
 	buf = []
 	for i, entity in enumerate(find_wikidata_entity_info(entity_ids - stored_entities)):
-		print 'Fetched entity', i
+		print 'Fetched entity', i, entity['_id']
 		buf.append(entity)
 		if len(buf) >= 10:
 			print 'Storing entities'
