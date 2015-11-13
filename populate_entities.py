@@ -5,11 +5,15 @@ import wikidata as wd
 def find_entity_ids_from_qdocs(limit=10):
 	'''Returns a set with all the entities used in discovered articles'''
 
-	articles = db.qdoc.find(
-		{ "$query": { "entities": { "$exists": True, "$elemMatch": {"$type": 2 }, "$not": {"$regex": "Q.*"} } },  # Find all articles that have an entities field
-		"$orderby": { '_id' : -1 } },  # Sort by latest entries
-		{ "entities": 1}  # Only want to get back the entities fields for these articles
-		)
+	articles = db.qdoc.find({
+		"$query": {
+			"entities": {
+				"$exists": True,
+				"$elemMatch": { "$type": 2, "$regex": r"^Q\d+" },
+ 			},
+ 		},
+		"$orderby": { '_id' : -1 }
+	}, { "entities": 1})
 	if limit:
 		articles = articles.limit(limit)
 
@@ -17,15 +21,7 @@ def find_entity_ids_from_qdocs(limit=10):
 	entity_ids = set([])
 	for article in articles:
 		for entity in article['entities']:
-			if type(entity) is dict:
-				id_ = entity['id']
-				if not id_.startswith('Q'):
-					import ipdb;ipdb.set_trace()
-				entity_ids.add(id_)
-			else:
-				if not entity.startswith('Q'):
-					import ipdb;ipdb.set_trace()
-				entity_ids.add(entity)
+			entity_ids.add(entity)
 
 	# Ensure no None values in our entities
 	entity_ids.discard(None)
