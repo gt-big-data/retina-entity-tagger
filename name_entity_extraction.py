@@ -7,17 +7,20 @@ wd = WikidataEntityLookup()
 def lookupNamedEntities(namedEntityTexts):
     '''
     Given list of texts that correspond to named entities,
-    return a list of dictionaries, where each dict has 
-    the original text, entity id, and description.
+    return a list of ids that these entities resolve to.
+
+    If text does not match a known entity, then it will
+    be mapped to None.
 
     Example usage:
-    lookupNamedEntities(['NYC', 'New York State', 'USA'])
+    lookupNamedEntities(['NYC', 'New York State', 'Does not exist'])
     should return [
-        {'text': 'NYC', 'id': 'Q60', 'description': 'city in state of New York...'},
-        {'text': 'New York State', 'id': 'Q1380', 'description': 'state in us..'}, ..
+       'Q60',
+       'Q1380',
+       None,
     ]
     '''
-    returned_list = []    
+    returned_list = []
     
     for i in xrange(len(namedEntityTexts)):
         entity = namedEntityTexts[i]

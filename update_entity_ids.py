@@ -1,34 +1,36 @@
 from dbco import *
 from name_entity_extraction import *
+import re
 
 #updates entities to wikidata ids
 def updateEntities():
-    articles = db.qdoc.find({ "$query": { "entities": { "$exists": True } }, "$orderby": { '_id' : 1 } })
-    for a in articles:
+    query = {
+        "entities": {
+            "$exists": True,
+            "$elemMatch": {
+                "$type": 2, # string
+                "$not":  re.compile("^Q\d+"),
+            }
+        }
+    }
+
+    articles = db.qdoc.find({ "$query":  query, "$orderby": { '_id' : -1 } })
+    for i, a in enumerate(articles):
         entities = a['entities']
-        updated = isUpdated(entities)
-        if not updated:
+        if not already_updated(entities):
             #print entities
+            print a['_id'], entities, 'need updated...'
             newEntities = lookupNamedEntities(entities)
             #print newEntities
             db.qdoc.update( { "_id": a['_id'] }, { "$set": {"entities": newEntities} } )
+        else:
+            print 'Article', i, 'already_updated', entities[0] if entities else 'no entity'
+
             #print "---------------------------"
 
 #determines if entities need to be updated
-def isUpdated(entities):
-    numOfQs = 0
-    for e in entities:
-        if e is None:
-            numOfQs += 1
-        elif e[0:1] == 'Q':
-            numOfQs += 1
-
-    if len(entities) == numOfQs:
-        return True
-    else:
-        #print numOfQs
-        #print len(entities)
-        return False
+def already_updated(entities):
+    return all([not e or e[0] == 'Q' for e in entities])
 
 #delete entities1 field
 def deleteEntities1():

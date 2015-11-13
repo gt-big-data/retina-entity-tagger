@@ -2,6 +2,7 @@ import requests
 import pprint
 import json
 import math
+import time
 
 # Properties
 PROP_CONTAINEDBY = "Contained By"
@@ -15,6 +16,17 @@ ID_INSTANCEOF = "P31"
 ID_HEADOFSTATE = "P6"
 ID_LEGISLATIVEBODY = "P1"
 ID_GEOLOCATION = "P625"
+
+def get_with_retry(url, params, tries_remaining=5):
+    if tries_remaining == 0:
+        return None
+    try:
+        time.sleep(0.01) # sleep 10 millis to be nice
+        return requests.get(url, params=params)
+    except Exception, e:
+        time.sleep(1.0)
+        return get_with_retry(url, params, tries_remaining - 1)
+
 
 class WikidataEntityLookup(object):
     BASE_URL = 'http://www.wikidata.org/w/api.php'
@@ -32,7 +44,7 @@ class WikidataEntityLookup(object):
     def __init__(self):
         pass
 
-    def searchEntities(self, entityText):
+    def searchEntities(self, entityText, maxTries=5):
         '''
         Search wikidata for entities described by the text entityText.
 
@@ -57,7 +69,8 @@ class WikidataEntityLookup(object):
             'format': 'json',
             'search': entityText
         }
-        response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
+        response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
+
         searchResult = json.loads(response.text)
         if 'search' not in searchResult or not searchResult['search']:
             return None
@@ -67,10 +80,7 @@ class WikidataEntityLookup(object):
         if 'id' not in bestResult:
             return None
 
-        return {
-            'id': bestResult['id'],
-            'description': bestResult['description'] if 'description' in bestResult else '',
-        }
+        return bestResult['id']
 
     def getTitle(self, entityInformation):
         if 'labels' in entityInformation and 'en' in entityInformation['labels'] and 'value' in entityInformation['labels']['en']:
@@ -99,12 +109,14 @@ class WikidataEntityLookup(object):
             if key in WikidataEntityLookup.COMMON_PROPERTIES:
                 propertyIds.append(WikidataEntityLookup.COMMON_PROPERTIES[key])
 
-        response = requests.get(WikidataEntityLookup.BASE_URL, params=params)
+        response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
         entityResult = json.loads(response.text)
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
-        
-        entities = entityResult['entities']
+        if 'entities' not in entityResult:
+            print 'Error fetching entity for ', entityId
+            return None
 
+        entities = entityResult['entities']
         if entityId not in entities:
             return None
 

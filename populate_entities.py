@@ -6,23 +6,35 @@ def find_entity_ids_from_qdocs(limit=10):
 	'''Returns a set with all the entities used in discovered articles'''
 
 	articles = db.qdoc.find(
-		{ "$query": { "entities": { "$exists": True } },  # Find all articles that have an entities field
+		{ "$query": { "entities": { "$exists": True, "$elemMatch": {"$type": 2 }, "$not": {"$regex": "Q.*"} } },  # Find all articles that have an entities field
 		"$orderby": { '_id' : -1 } },  # Sort by latest entries
 		{ "entities": 1}  # Only want to get back the entities fields for these articles
-		).limit(limit)
+		)
+	if limit:
+		articles = articles.limit(limit)
 
 	# Map articles to sets of their entities
-	entitySets = map(lambda article: set(article['entities']), articles)
-
-	# Union all the sets of entities togeter, get one set of all entities found
-	entities = set().union(*entitySets)
+	entity_ids = set([])
+	for article in articles:
+		for entity in article['entities']:
+			if type(entity) is dict:
+				id_ = entity['id']
+				if not id_.startswith('Q'):
+					import ipdb;ipdb.set_trace()
+				entity_ids.add(id_)
+			else:
+				if not entity.startswith('Q'):
+					import ipdb;ipdb.set_trace()
+				entity_ids.add(entity)
 
 	# Ensure no None values in our entities
-	entities.discard(None)
+	entity_ids.discard(None)
 
 	# Converts each entity from unicode to str
-	cleaned_entity_ids = {str(entity) for entity in entities}
-
+	try:
+		cleaned_entity_ids = {unicode(entity_id) for entity_id in entity_ids}
+	except:
+		import ipdb;ipdb.set_trace()
 	return cleaned_entity_ids
 
 def storeEntities(entities):
@@ -44,6 +56,9 @@ def find_wikidata_entity_info(entityIds):
 	wd_lookup = wd.WikidataEntityLookup()
 
 	for entityId in entityIds:
+		if not entityId.startswith('Q'):
+			import ipdb;ipdb.set_trace()
+
 		entity = wd_lookup.lookupEntityById(entityId, desiredProperties)
 		if not entity:
 			print 'No entity for', entityId
@@ -62,11 +77,15 @@ def entities_in_db():
 
 def main():
 	stored_entities = entities_in_db()
-	entity_ids = find_entity_ids_from_qdocs(limit=10)
+	print 'Found', len(stored_entities), 'entities already fetched'
+	entity_ids = find_entity_ids_from_qdocs(limit=None)
+	print 'Found', len(entity_ids), 'to fetch'
 	buf = []
-	for entity in find_wikidata_entity_info(entity_ids - stored_entities):
+	for i, entity in enumerate(find_wikidata_entity_info(entity_ids - stored_entities)):
+		print 'Fetched entity', i
 		buf.append(entity)
 		if len(buf) >= 10:
+			print 'Storing entities'
 			storeEntities(buf)
 			buf = []
 
@@ -74,4 +93,4 @@ def main():
 		storeEntities(buf)
 
 if __name__ == "__main__":
-    main()
+	main()
