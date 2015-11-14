@@ -1,5 +1,4 @@
 import name_entity_spacy as spcy
-import nltk
 from wikidata import WikidataEntityLookup
 from dbco import *
 
@@ -20,14 +19,19 @@ def lookupNamedEntities(namedEntityTexts):
        None,
     ]
     '''
-    returned_list = []
+    returned_dict = {}
     
-    for i in xrange(len(namedEntityTexts)):
-        entity = namedEntityTexts[i]
+    namedEntitySet = set(namedEntityTexts)
+    missingEntitySet = namedEntitySet
+    
+    # lookup namedEntitySet in local database
+    # Save entities not in local database as missingEntitySet
+    
+    for entity in missingEntitySet:
         entityId = wd.searchEntities(entity)
-        returned_list.append(entityId)
+        returned_dict[entity] = entityId[0] if entityId else None
         
-    return returned_list
+    return returned_dict
 
 
 def getArticlesNoEntities(limit=1000):
@@ -38,12 +42,12 @@ def getArticlesNoEntities(limit=1000):
 def tagEntities():
     articles = getArticlesNoEntities()
     for a in articles:
-        try:
+        if 'content' in a:
             parsed_text = spcy.nlp_parse(a['content'])
-            entities = lookupNamedEntities(parsed_text['entities'])
-            unique_entities = sorted(set([entity for entity in entities if entity]))
-            db.qdoc.update( { "_id": a['_id'] },{"$set": {"entity_ids": unique_entities, "entities": entities, "nlp" : parsed_text } } )
-        except:
+            unique_entities = lookupNamedEntities(parsed_text['entities'])
+            entity_map = [unique_entities[entity] for entity in parsed_text['entities']]
+            db.qdoc.update( { "_id": a['_id'] },{"$set": {"entity_ids": unique_entities, "entity_map": entity_map, "nlp" : parsed_text } } )
+        else:
             err_str = 'No content in article {id}. Deleting article.'.format(id = a['_id'])
             print(err_str)
             db.qdoc.remove(spec_or_id = a['_id'])

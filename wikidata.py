@@ -49,19 +49,16 @@ class WikidataEntityLookup(object):
         Search wikidata for entities described by the text entityText.
 
         Sample usage:
-        wd = WikidataEntityLookup()
-        entity = wd.searchEntities('NYC') # or, use an alias, eg wd.searchEntities('the big apple')
-        print entity # prints {'id': 'Q60', 'description': 'city in state of New York..'}
+        TBD
 
         Parameters:
         - entityText Text to search for an entity match.
 
         Output:
-        If there was a wikidata match, returns a dictionary of 'id', 'description', where
-        - 'id' is the wikidata id of the entity
-        - 'description' is the description of the entity, if one exists.
+        If there was a wikidata match, returns a list of potentials ids, where
+        - 'id' is the wikidata id of the entity, where the ids are sorted by likelihood of match, descending.
 
-        If there was no entity match, returns None
+        If there was no entity match, returns an empty list.
         '''
         params = {
             'action': 'wbsearchentities',
@@ -75,12 +72,9 @@ class WikidataEntityLookup(object):
         if 'search' not in searchResult or not searchResult['search']:
             return None
 
-        # pick first one, for now
-        bestResult = searchResult['search'][0]
-        if 'id' not in bestResult:
-            return None
-
-        return bestResult['id']
+        result = [search['id'] for search in searchResult['search'] if 'id' in search]
+        
+        return result
 
     def getTitle(self, entityInformation):
         if 'labels' in entityInformation and 'en' in entityInformation['labels'] and 'value' in entityInformation['labels']['en']:
