@@ -1,17 +1,24 @@
 from spacy.en import English
+import re
+
 nlp = English()
 
-        
-def get_entities_spacy(input_string):
-    input_string = unicode(input_string)
-    doc = nlp(input_string)
-    
-    output_list = []
-    for span in list(doc.ents):
-        ent_name = []
-        for token in span:
-            ent_name.append(token.orth_)
-        ent_name = " ".join(ent_name)
-        output_list.append(ent_name)
-            
-    return output_list
+SUPPORTED_TYPES = {'ORG', 'PERSON', 'GPE'}
+
+def nlp_parse(text):
+    doc = nlp(unicode(text))
+    entities = [ent for ent in doc.ents if ent.label_ in SUPPORTED_TYPES]
+
+    entity_texts = []
+    for ent in entities:
+        if ent.label_ == 'PERSON':
+            entity_texts.append(ent.text.replace('\'s', ''))
+        else:
+            entity_texts.append(ent.text)
+
+    return {
+        'tokens': [tok.text for tok in doc],
+        'entities': entity_texts,
+        'entity_spans': [(ent.start, ent.end) for ent in entities],
+        'sentence_spans': [(sent.start, sent.end) for sent in doc.sents]
+    }

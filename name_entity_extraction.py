@@ -68,7 +68,10 @@ def tagEntities():
     articles = getArticlesNoEntities()
     for a in articles:
         try:
-            db.qdoc.update( { "_id": a['_id'] },{"$set": {"entities": getNameEntities(a['content'] ) } } )
+            parsed_text = spcy.nlp_parse(a['content'])
+            entities = lookupNamedEntities(parsed_text['entities'])
+            unique_entities = sorted(set([entity for entity in entities if entity]))
+            db.qdoc.update( { "_id": a['_id'] },{"$set": {"entity_ids": unique_entities, "entities": entities, "nlp" : parsed_text } } )
         except:
             err_str = 'No content in article {id}. Deleting article.'.format(id = a['_id'])
             print(err_str)
