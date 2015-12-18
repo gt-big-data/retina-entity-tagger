@@ -74,8 +74,7 @@ class WikidataEntityLookup(object):
 
     def __init__(self):
         self._workers = multiprocessing.Pool(
-            1)
-            #3 * multiprocessing.cpu_count())
+            3 * multiprocessing.cpu_count())
 
     def bulk_search_entities(self, entity_texts, maxTries=5):
         unique_entities = sorted(set(entity_texts))
