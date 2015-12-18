@@ -2,6 +2,7 @@ import requests
 import pprint
 import json
 import math
+import multiprocessing
 import time
 
 # Properties
@@ -27,6 +28,36 @@ def get_with_retry(url, params, tries_remaining=5):
         time.sleep(1.0)
         return get_with_retry(url, params, tries_remaining - 1)
 
+def search_entity(entityText, maxTries=5):
+    '''
+    Search wikidata for entities described by the text entityText.
+
+    Sample usage:
+    TBD
+
+    Parameters:
+    - entityText Text to search for an entity match.
+
+    Output:
+    If there was a wikidata match, returns a list of potentials ids, where
+    - 'id' is the wikidata id of the entity, where the ids are sorted by likelihood of match, descending.
+
+    If there was no entity match, returns an empty list.
+    '''
+    params = {
+        'action': 'wbsearchentities',
+        'language': 'en',
+        'format': 'json',
+        'search': entityText
+    }
+    response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
+
+    searchResult = json.loads(response.text)
+    if 'search' not in searchResult or not searchResult['search']:
+        return None
+
+    result = [search['id'] for search in searchResult['search'] if 'id' in search]
+    return result        
 
 class WikidataEntityLookup(object):
     BASE_URL = 'http://www.wikidata.org/w/api.php'
@@ -42,39 +73,19 @@ class WikidataEntityLookup(object):
     IDS_TO_PROPERTIES = {value: key for key, value in COMMON_PROPERTIES.iteritems()}
 
     def __init__(self):
-        pass
+        self._workers = multiprocessing.Pool(
+            1)
+            #3 * multiprocessing.cpu_count())
 
-    def searchEntities(self, entityText, maxTries=5):
-        '''
-        Search wikidata for entities described by the text entityText.
+    def bulk_search_entities(self, entity_texts, maxTries=5):
+        unique_entities = sorted(set(entity_texts))
+        start = time.time()
+        possible_ids = self._workers.map(search_entity, unique_entities)
+        print 'Fetched', len(unique_entities), 'entity ids in', time.time() - start, 'seconds'
+        return dict(zip(unique_entities, possible_ids))
 
-        Sample usage:
-        TBD
-
-        Parameters:
-        - entityText Text to search for an entity match.
-
-        Output:
-        If there was a wikidata match, returns a list of potentials ids, where
-        - 'id' is the wikidata id of the entity, where the ids are sorted by likelihood of match, descending.
-
-        If there was no entity match, returns an empty list.
-        '''
-        params = {
-            'action': 'wbsearchentities',
-            'language': 'en',
-            'format': 'json',
-            'search': entityText
-        }
-        response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
-
-        searchResult = json.loads(response.text)
-        if 'search' not in searchResult or not searchResult['search']:
-            return None
-
-        result = [search['id'] for search in searchResult['search'] if 'id' in search]
-        
-        return result
+    def searchEntity(self, entityText, maxTries=5):
+        return search_entity(entityText, maxTries)
 
     def getTitle(self, entityInformation):
         if 'labels' in entityInformation and 'en' in entityInformation['labels'] and 'value' in entityInformation['labels']['en']:
@@ -151,5 +162,7 @@ class WikidataEntityLookup(object):
         except KeyError:
             return None
 
-data = WikidataEntityLookup()
-entityId = data
+if __name__ == '__main__':
+    wd = WikidataEntityLookup()
+    entities = ['UK', 'EU', 'U.S', 'Ireland', 'The European Commission', 'Lucia Caudet', 'Fox', 'Paramount Pictures', 'Comcast Corp', 'Sony', 'Viacom', 'Warner Bros', 'Twentieth Century', 'NBCUniversal']
+    print wd.bulk_search_entities(entities)
