@@ -1,7 +1,9 @@
 from spacy.en import English
 import re
 
+print 'Loading spacy..'
 nlp = English()
+print 'Spacy loaded.'
 
 SUPPORTED_TYPES = {'ORG', 'PERSON', 'GPE'}
 

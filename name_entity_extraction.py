@@ -39,7 +39,7 @@ def insert_batch(updates):
 
 #Driver
 def tagEntities():
-    articles = getArticlesNoEntities(1024)
+    articles = getArticlesNoEntities(102400)
     updates = []
     spacy_parse_start = time.time()
     print 'Begin entity tagging..'
@@ -60,6 +60,8 @@ def tagEntities():
     if updates:
         print 'Spacy parsed', len(updates), 'docs in', time.time() - spacy_parse_start, 'seconds'
         insert_batch(updates)
+
+    import IPython;IPython.embed()
 
 if __name__ == "__main__":
     tagEntities()

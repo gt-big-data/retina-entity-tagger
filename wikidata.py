@@ -75,13 +75,18 @@ class WikidataEntityLookup(object):
     def __init__(self):
         self._workers = multiprocessing.Pool(
             3 * multiprocessing.cpu_count())
+        self._entity_id_cache = {}
 
     def bulk_search_entities(self, entity_texts, maxTries=5):
         unique_entities = sorted(set(entity_texts))
+        new_entities = [text for text in unique_entities if text not in self._entity_id_cache]
         start = time.time()
+        print 'Fetching', len(new_entities), 'new entity ids of', len(unique_entities), 'requested'
         possible_ids = self._workers.map(search_entity, unique_entities)
         print 'Fetched', len(unique_entities), 'entity ids in', time.time() - start, 'seconds'
-        return dict(zip(unique_entities, possible_ids))
+        for new_entity, ids in zip(new_entities, possible_ids):
+            self._entity_id_cache[new_entity] = ids
+        return {text: self._entity_id_cache[text] for text in unique_entities}
 
     def searchEntity(self, entityText, maxTries=5):
         return search_entity(entityText, maxTries)
