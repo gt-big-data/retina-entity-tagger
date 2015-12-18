@@ -5,7 +5,7 @@ nlp = English()
 
 SUPPORTED_TYPES = {'ORG', 'PERSON', 'GPE'}
 
-def nlp_parse(text):
+def parse_entities(text):
     doc = nlp(unicode(text))
     entities = [ent for ent in doc.ents if ent.label_ in SUPPORTED_TYPES]
 
@@ -16,9 +16,4 @@ def nlp_parse(text):
         else:
             entity_texts.append(ent.text)
 
-    return {
-        'tokens': [tok.text for tok in doc],
-        'entities': entity_texts,
-        'entity_spans': [(ent.start, ent.end) for ent in entities],
-        'sentence_spans': [(sent.start, sent.end) for sent in doc.sents]
-    }
+    return entity_texts

@@ -1,37 +1,24 @@
 import name_entity_spacy as spcy
 from wikidata import WikidataEntityLookup
+from collections import Counter
 from dbco import *
 
 wd = WikidataEntityLookup()
-def lookupNamedEntities(namedEntityTexts):
-    '''
-    Given list of texts that correspond to named entities,
-    return a list of ids that these entities resolve to.
+def lookup_entities(entity_texts):
+    counts = Counter(entity_texts)
+    entity_name_to_id = {}
+    for entity in counts:
+        possible_ids = wd.searchEntities(entity)
+        entity_name_to_id[entity] = possible_ids[0] if possible_ids else None
 
-    If text does not match a known entity, then it will
-    be mapped to None.
-
-    Example usage:
-    lookupNamedEntities(['NYC', 'New York State', 'Does not exist'])
-    should return [
-       'Q60',
-       'Q1380',
-       None,
-    ]
-    '''
-    returned_dict = {}
-    
-    namedEntitySet = set(namedEntityTexts)
-    missingEntitySet = namedEntitySet
-    
-    # lookup namedEntitySet in local database
-    # Save entities not in local database as missingEntitySet
-    
-    for entity in missingEntitySet:
-        entityId = wd.searchEntities(entity)
-        returned_dict[entity] = entityId[0] if entityId else None
-        
-    return returned_dict
+    entities = []
+    for entity_text, count in counts.most_common():
+        entities.append({
+            'wdid': entity_name_to_id[entity_text],
+            'text': entity_text,
+            'count': count,
+        })
+    return entities
 
 
 def getArticlesNoEntities(limit=1000):
@@ -40,17 +27,28 @@ def getArticlesNoEntities(limit=1000):
 
 #Driver
 def tagEntities():
-    articles = getArticlesNoEntities()
-    for a in articles:
-        if 'content' in a:
-            parsed_text = spcy.nlp_parse(a['content'])
-            unique_entities = lookupNamedEntities(parsed_text['entities'])
-            entity_map = [unique_entities[entity] for entity in parsed_text['entities']]
-            db.qdoc.update( { "_id": a['_id'] },{"$set": {"entity_ids": unique_entities, "entity_map": entity_map, "nlp" : parsed_text } } )
+    articles = getArticlesNoEntities(10)
+    updates = []
+    for article in list(articles):
+        if 'content' in article:
+            entity_texts = spcy.parse_entities(article['content'])
+            updates.append((article['_id'], lookup_entities(entity_texts)))
+            if len(updates) > 1000:
+                bulk = db.qdoc.initialize_unordered_bulk_op()
+                for id_, entities in updates:
+                    bulk.find({'_id': id_}).update({'$set': {'entities': entities}})
+                bulk.execute()
+                updates = []
         else:
             err_str = 'No content in article {id}. Deleting article.'.format(id = a['_id'])
             print(err_str)
             db.qdoc.remove(spec_or_id = a['_id'])
+
+    if updates:
+        bulk = db.qdoc.initialize_unordered_bulk_op()
+        for id_, entities in updates:
+            bulk.find({'_id': id_}).update({'$set': {'entities': entities}})
+        bulk.execute()
 
 if __name__ == "__main__":
     tagEntities()
