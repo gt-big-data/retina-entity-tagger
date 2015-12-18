@@ -82,10 +82,10 @@ class WikidataEntityLookup(object):
         new_entities = [text for text in unique_entities if text not in self._entity_id_cache]
         start = time.time()
         print 'Fetching', len(new_entities), 'new entity ids of', len(unique_entities), 'requested'
-        possible_ids = self._workers.map(search_entity, unique_entities)
+        possible_ids = self._workers.map(search_entity, new_entities)
         print 'Fetched', len(unique_entities), 'entity ids in', time.time() - start, 'seconds'
         for new_entity, ids in zip(new_entities, possible_ids):
-            self._entity_id_cache[new_entity] = ids
+            self._entity_id_cache[new_entity] = [ids[0]] if ids else None
         return {text: self._entity_id_cache[text] for text in unique_entities}
 
     def searchEntity(self, entityText, maxTries=5):
