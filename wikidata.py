@@ -119,7 +119,12 @@ class WikidataEntityLookup(object):
                 propertyIds.append(WikidataEntityLookup.COMMON_PROPERTIES[key])
 
         response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
-        entityResult = json.loads(response.text)
+        try:
+            entityResult = json.loads(response.text)
+        except Exception, e:
+            print e
+            print response.text
+            return None
         # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
         if 'entities' not in entityResult:
             print 'Error fetching entity for ', entityId
