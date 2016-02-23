@@ -50,17 +50,18 @@ def qdocEntityLookup():
             "$lookup":
             {
                 "from": "entities",
-                "localField": "wdid",
+                "localField": "entities.wdid",
                 "foreignField": "_id",
                 "as": "entity_lookup"
             }
     }
-    limit = {"$limit": 100}
-    result = db.qdoc.aggregate([unwind, limit])
+    match = {"$match": {"entity_lookup.type" : "human"}}
+    limit = {"$limit": 1000}
+    result = db.qdoc.aggregate([limit, unwind, lookup, match])
 
+    #Error found: _id can't be trusted in qdoc, text can probably
     for item in result:
         print(item)
-        break
     #match = {"$match": {"timestamp" : {"$gt" : startTime, "$lt" : endTime}}}
     #qdocLookup = list(db.qdoc.find({'_id': {'$exists': True}}).limit(100))
 
