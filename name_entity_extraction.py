@@ -21,7 +21,6 @@ def text_to_entity(entity_texts, text_to_ids):
         })
     return entities
 
-
 def getArticlesNoEntities(limit=1000):
     articles = db.qdoc.find({ "$query": { "entities": { "$exists": False } }, "$orderby": { '_id' : -1 } }, no_cursor_timeout=True).limit(limit)
     return articles
@@ -37,7 +36,6 @@ def insert_batch(updates):
         bulk.find({'_id': id_}).update({'$set': {'entities': entities}})
     bulk.execute()
 
-#Driver
 def tagEntities():
     articles = getArticlesNoEntities(102400)
     updates = []
@@ -60,8 +58,6 @@ def tagEntities():
     if updates:
         print 'Spacy parsed', len(updates), 'docs in', time.time() - spacy_parse_start, 'seconds'
         insert_batch(updates)
-
-    import IPython;IPython.embed()
 
 if __name__ == "__main__":
     tagEntities()

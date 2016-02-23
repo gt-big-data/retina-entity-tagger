@@ -1,9 +1,4 @@
-import requests
-import pprint
-import json
-import math
-import multiprocessing
-import time
+import requests, json, time, multiprocessing
 
 # Properties
 PROP_CONTAINEDBY = "Contained By"
@@ -28,28 +23,15 @@ def get_with_retry(url, params, tries_remaining=5):
         time.sleep(1.0)
         return get_with_retry(url, params, tries_remaining - 1)
 
-def search_entity(entityText, maxTries=5):
+def search_entity(entityText):
     '''
-    Search wikidata for entities described by the text entityText.
-
-    Sample usage:
-    TBD
-
     Parameters:
     - entityText Text to search for an entity match.
-
     Output:
     If there was a wikidata match, returns a list of potentials ids, where
     - 'id' is the wikidata id of the entity, where the ids are sorted by likelihood of match, descending.
-
-    If there was no entity match, returns an empty list.
     '''
-    params = {
-        'action': 'wbsearchentities',
-        'language': 'en',
-        'format': 'json',
-        'search': entityText
-    }
+    params = {'action': 'wbsearchentities', 'language': 'en', 'format': 'json', 'search': entityText}
     response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
 
     searchResult = json.loads(response.text)
@@ -57,7 +39,7 @@ def search_entity(entityText, maxTries=5):
         return None
 
     result = [search['id'] for search in searchResult['search'] if 'id' in search]
-    return result        
+    return result
 
 class WikidataEntityLookup(object):
     BASE_URL = 'http://www.wikidata.org/w/api.php'
@@ -73,11 +55,10 @@ class WikidataEntityLookup(object):
     IDS_TO_PROPERTIES = {value: key for key, value in COMMON_PROPERTIES.iteritems()}
 
     def __init__(self):
-        self._workers = multiprocessing.Pool(
-            3 * multiprocessing.cpu_count())
+        self._workers = multiprocessing.Pool(3*multiprocessing.cpu_count())
         self._entity_id_cache = {}
 
-    def bulk_search_entities(self, entity_texts, maxTries=5):
+    def bulk_search_entities(self, entity_texts):
         unique_entities = sorted(set(entity_texts))
         new_entities = [text for text in unique_entities if text not in self._entity_id_cache]
         start = time.time()
@@ -86,16 +67,12 @@ class WikidataEntityLookup(object):
         print 'Fetched', len(unique_entities), 'entity ids in', time.time() - start, 'seconds'
         for new_entity, ids in zip(new_entities, possible_ids):
             self._entity_id_cache[new_entity] = [ids[0]] if ids else None
-        return {text: self._entity_id_cache[text] for text in unique_entities}
-
-    def searchEntity(self, entityText, maxTries=5):
-        return search_entity(entityText, maxTries)
+        return {ent: self._entity_id_cache[ent] for ent in unique_entities}
 
     def getTitle(self, entityInformation):
         if 'labels' in entityInformation and 'en' in entityInformation['labels'] and 'value' in entityInformation['labels']['en']:
             return entityInformation['labels']['en']['value']
         return None
-
 
     def getAliases(self, entityInformation):
         return entityInformation['aliases'] if 'aliases' in entityInformation else None
@@ -105,18 +82,7 @@ class WikidataEntityLookup(object):
         entityId, the entityId to look up
         properties, a collection of human-readable properties to look for
         """
-        params = {
-            'action': 'wbgetentities',
-            'languages': 'en',
-            'format': 'json',
-            'ids': '|'.join([entityId])
-        }
-
-        propertyIds = []
-
-        for key in properties:
-            if key in WikidataEntityLookup.COMMON_PROPERTIES:
-                propertyIds.append(WikidataEntityLookup.COMMON_PROPERTIES[key])
+        params = {'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': entityId}
 
         response = get_with_retry(WikidataEntityLookup.BASE_URL, params=params)
         try:
@@ -125,7 +91,6 @@ class WikidataEntityLookup(object):
             print e
             print response.text
             return None
-        # print json.dumps(entityResult['entities'][entityId], sort_keys=True, indent=4, separators=(',', ': '))
         if 'entities' not in entityResult:
             print 'Error fetching entity for ', entityId
             return None
@@ -134,14 +99,11 @@ class WikidataEntityLookup(object):
         if entityId not in entities:
             return None
 
-        entity = {
-            'id': entityId,
+        return {'id': entityId,
             'title': self.getTitle(entities[entityId]),
             'aliases': self.getAliases(entities[entityId]),
             'properties': self.getProperties(entities[entityId], properties),
         }
-
-        return entity
 
     def getProperties(self, entityInformation, propertyNames):
         properties = {}
@@ -154,8 +116,6 @@ class WikidataEntityLookup(object):
                     'wd_id': propId,
                 }
         return properties
-        
-
 
     def get_property_value(self, entityInformation, propertyId):
         try:            
@@ -170,8 +130,3 @@ class WikidataEntityLookup(object):
                 return data_values['value']
         except KeyError:
             return None
-
-if __name__ == '__main__':
-    wd = WikidataEntityLookup()
-    entities = ['UK', 'EU', 'U.S', 'Ireland', 'The European Commission', 'Lucia Caudet', 'Fox', 'Paramount Pictures', 'Comcast Corp', 'Sony', 'Viacom', 'Warner Bros', 'Twentieth Century', 'NBCUniversal']
-    print wd.bulk_search_entities(entities)
