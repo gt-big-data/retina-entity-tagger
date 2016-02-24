@@ -1,21 +1,17 @@
 import wikidata as wd
 from dbco import *
 
-def all_qdoc_entities():
+def unpopulatedEntities():
 	match = {'$match': {'entities': {'$exists': True}}}
 	unwind = {'$unwind': '$entities'}
+	match2 = {'$match': {'entities.wdid': {'$ne': None}}}
 	group = {'$group': {'_id': '$entities.wdid'}}
-	match2 = {'$match': {'_id': {'$ne': None}}}
-	limit = {'$limit': 2000}
-	return set([d['_id'] for d in db.qdoc.aggregate([match, unwind, group, match2, limit])])
+	lookup = {'$lookup': {'from': 'entities', 'localField': '_id', 'foreignField': '_id', 'as': 'pop'}}
+	match3 = {'$match': {'pop': []}} # Find only the ones that do not exist in entities
+	return db.qdoc.aggregate([match, unwind, group, match2, limit])
 
 def main():
-	stored_entities = set(str(doc['_id']) for doc in db.entities.find({}, {'_id': 1}))
-	entity_ids = all_qdoc_entities()
-	print 'Found', len(stored_entities), 'entities already fetched'
-	print 'Found', len(entity_ids), 'to fetch'
-	newEnts = entity_ids - stored_entities
-	print len(newEnts)
+	newEnts = [e['_id'] for e in unpopulatedEntities()]
 	pops = wd.bulkPopulate(newEnts)
 	bulk = db.entities.initialize_unordered_bulk_op()
 	i = 0
@@ -29,4 +25,9 @@ def main():
 		bulk.execute()
 
 if __name__ == "__main__":
-	main()
+	# main()
+	ents = ['Barack Obama', 'Michelle Obama', 'Marvin Minsky', 'France', 'U.S.A']
+	dictio = wd.bulkFind(ents)
+	pops = wd.bulkPopulate([dictio[e] if dictio[e] is not None else None for e in ents])
+	for ent, pop in zip(ents, pops):
+		print ent, " => ", pop

@@ -1,8 +1,9 @@
 import requests, json, time, multiprocessing
+# from pprint import pformat
 
 global property_dict, _entity_id_cache
-property_dict = {"Contained By": "P131", "Instance of": "P31", "Head of State": "P6", "Legislative Body": "P1", "GeoLocation": "P625"}
-
+property_dict = {"contained": "P131", "wdType": "P31", "capitalOf": "P6", "legislative": "P1", "geolocation": "P625"}
+inverse_dict = {value: key for key, value in property_dict.items()}
 _entity_id_cache = {}
 
 def ask_wikidata(params):
@@ -14,12 +15,15 @@ def findEntity(entityText):
     return [item['id'] for item in jsonResult.get('search', []) if 'id' in item]
 
 def populateEntity(wdid, goodProperties=[]):
-    goodProperties = ["Instance of", "Contained By", "GeoLocation"] if len(goodProperties) == 0 else goodProperties
+    goodProperties = ["contained", "wdType", "geolocation"] if len(goodProperties) == 0 else goodProperties
     jsonResult = ask_wikidata({'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': wdid})
+    # f = open(wdid+'.txt', 'w'); f.write(pformat(jsonResult)); f.close();
     entry = jsonResult.get('entities', {}).get(wdid, None)
     if entry == None:
         return None
-    return {'_id': wdid, 'title': getTitle(entry), 'aliases': getAliases(entry), 'properties': getProperties(entry, goodProperties)}
+    build = {'_id': wdid, 'title': getTitle(entry), 'aliases': getAliases(entry)}
+    build.update(getProperties(entry, goodProperties))
+    return build
 
 def bulkFind(texts):
     global _entity_id_cache
@@ -40,7 +44,10 @@ def bulkPopulate(wdids):
     return workers.map(populateEntity, wdids)
 
 def getAliases(entityInformation):
-    return entityInformation['aliases'] if 'aliases' in entityInformation else None
+    try:
+        return [a['value'] for a in entityInformation['aliases']['en']]
+    except:
+        return None
 
 def getTitle(entityInformation):
     try:
@@ -52,12 +59,12 @@ def getProperties(jsonObj, props=[]):
     global property_dict
     return {prop: getProperty(jsonObj, property_dict[prop]) for prop in props if getProperty(jsonObj, property_dict[prop])}
 
-def getProperty(jsonObj, propertyId):
+def getProperty(jsonObj, propId):
     try:
-        data_values = jsonObj['claims'][propertyId][0]['mainsnak']['datavalue']
-        if 'numeric-id' in data_values:
-            return 'Q' + str(data_values['numeric-id'])
-        elif 'value' in data_values:
-            return data_values['value']
+        if inverse_dict[propId] == 'geolocation':
+            obj = jsonObj['claims'][propId][0]['mainsnak']['datavalue']['value']
+            return {'lat': obj['latitude'], 'lon': obj['longitude']}
+        else:
+            return 'Q'+str(jsonObj['claims'][propId][0]['mainsnak']['datavalue']['value']['numeric-id'])
     except KeyError:
         return None
