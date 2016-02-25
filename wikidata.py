@@ -1,5 +1,5 @@
 import requests, json, time, multiprocessing
-# from pprint import pformat
+from pprint import pformat
 
 global property_dict, _entity_id_cache
 property_dict = {"contained": "P131", "wdType": "P31", "capitalOf": "P6", "legislative": "P1", "geolocation": "P625"}
@@ -8,7 +8,7 @@ _entity_id_cache = {}
 
 def ask_wikidata(params):
     response = requests.get('http://www.wikidata.org/w/api.php', params=params)
-    return json.loads(response.text)
+    return json.loads(unicode(response.text))
 
 def findEntity(entityText):
     jsonResult = ask_wikidata({'action': 'wbsearchentities', 'language': 'en', 'format': 'json', 'search': entityText})
@@ -22,7 +22,9 @@ def populateEntity(wdid, goodProperties=[]):
     if entry == None:
         return None
     build = {'_id': wdid, 'title': getTitle(entry), 'aliases': getAliases(entry)}
-    build.update(getProperties(entry, goodProperties))
+    myProperties = getProperties(entry, goodProperties)
+    build['type'] = insiderType(myProperties)
+    build.update(myProperties)
     return build
 
 def bulkFind(texts):
@@ -58,6 +60,15 @@ def getTitle(entityInformation):
 def getProperties(jsonObj, props=[]):
     global property_dict
     return {prop: getProperty(jsonObj, property_dict[prop]) for prop in props if getProperty(jsonObj, property_dict[prop])}
+
+def insiderType(properties):
+    try:
+        if properties['wdType'] == 'Q5':
+            return 'human'
+        elif properties.get('geolocation', None) is not None:
+            return 'loc'
+    except:
+        return ''
 
 def getProperty(jsonObj, propId):
     try:
