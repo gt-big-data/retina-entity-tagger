@@ -24,7 +24,7 @@ def main():
 
 if __name__ == "__main__":
 	main()
-	# ents = ['Barack Obama', 'Michelle Obama', 'Marvin Minsky', 'France', 'U.S.A']
+	# ents = ['Google']
 	# dictio = wd.bulkFind(ents)
 	# pops = wd.bulkPopulate([dictio[e] if dictio[e] is not None else None for e in ents])
 	# for ent, pop in zip(ents, pops):
