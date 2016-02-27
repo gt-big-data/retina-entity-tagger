@@ -17,7 +17,7 @@ def findEntity(entityText):
 def populateEntity(wdid, goodProperties=[]):
     goodProperties = ["contained", "wdType", "geolocation"] if len(goodProperties) == 0 else goodProperties
     jsonResult = ask_wikidata({'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': wdid})
-    # f = open(wdid+'.txt', 'w'); f.write(pformat(jsonResult)); f.close();
+    f = open(wdid+'.txt', 'w'); f.write(pformat(jsonResult)); f.close();
     entry = jsonResult.get('entities', {}).get(wdid, None)
     if entry == None:
         return None
@@ -36,6 +36,7 @@ def bulkFind(texts):
     start = time.time()
     print 'Fetching', len(new_entities), 'new entity ids of', len(unique_entities), 'requested'
     id_results = workers.map(findEntity, new_entities)
+    workers.close()
     print 'Fetched in ', time.time() - start, 'seconds'
     for new_entity, ids in zip(new_entities, id_results):
         _entity_id_cache[new_entity] = ids[0] if ids else None
@@ -43,7 +44,9 @@ def bulkFind(texts):
 
 def bulkPopulate(wdids):
     workers = multiprocessing.Pool(3*multiprocessing.cpu_count())
-    return workers.map(populateEntity, wdids)
+    results = workers.map(populateEntity, wdids)
+    workers.close()
+    return results
 
 def getAliases(entityInformation):
     try:

@@ -23,9 +23,9 @@ def main():
 		print "Populated 1000 entities"
 
 if __name__ == "__main__":
-	main()
-	# ents = ['Barack Obama', 'Michelle Obama', 'Marvin Minsky', 'France', 'U.S.A']
-	# dictio = wd.bulkFind(ents)
-	# pops = wd.bulkPopulate([dictio[e] if dictio[e] is not None else None for e in ents])
-	# for ent, pop in zip(ents, pops):
-	# 	print ent, " => ", pop
+	# main()
+	ents = ['Google']
+	dictio = wd.bulkFind(ents)
+	pops = wd.bulkPopulate([dictio[e] if dictio[e] is not None else None for e in ents])
+	for ent, pop in zip(ents, pops):
+		print ent, " => ", pop
