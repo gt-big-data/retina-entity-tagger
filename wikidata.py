@@ -1,5 +1,6 @@
 import requests, json, time, multiprocessing
 from pprint import pformat
+from collections import Counter
 
 global property_dict, _entity_id_cache
 property_dict = {"contained": "P131", "wdType": "P31", "capitalOf": "P6", "legislative": "P1", "geolocation": "P625", "industry": "P452"}
@@ -81,3 +82,22 @@ def getProperty(jsonObj, propId):
             return 'Q'+str(jsonObj['claims'][propId][0]['mainsnak']['datavalue']['value']['numeric-id'])
     except KeyError:
         return None
+
+
+def getEntityProperties(wdid):
+    jsonResult = ask_wikidata({'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': wdid})
+    return jsonResult['entities'][wdid]['claims'].keys()
+
+def getPropertyTitle(wdid):
+    jsonResult = ask_wikidata({'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': wdid})
+    return jsonResult['entities'][wdid]['labels']['en']['value']
+
+def propertiesCounts(number_of_entities):
+    propList = []
+    for i in range(number_of_entities):
+        q = 'Q' + str(i)
+        try:
+            propList.extend(getEntityProperties(q))
+        except:
+            pass
+    return list((x[0], getPropertyTitle(x[0]), x[1]) for x in Counter(propList).most_common())
