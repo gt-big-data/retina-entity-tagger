@@ -2,7 +2,7 @@ import requests, json, time, multiprocessing
 from pprint import pformat
 
 global property_dict, _entity_id_cache
-property_dict = {"contained": "P131", "wdType": "P31", "capitalOf": "P6", "legislative": "P1", "geolocation": "P625"}
+property_dict = {"contained": "P131", "wdType": "P31", "capitalOf": "P6", "legislative": "P1", "geolocation": "P625", "industry": "P452"}
 inverse_dict = {value: key for key, value in property_dict.items()}
 _entity_id_cache = {}
 
@@ -15,7 +15,7 @@ def findEntity(entityText):
     return [item['id'] for item in jsonResult.get('search', []) if 'id' in item]
 
 def populateEntity(wdid, goodProperties=[]):
-    goodProperties = ["contained", "wdType", "geolocation"] if len(goodProperties) == 0 else goodProperties
+    goodProperties = ["contained", "wdType", "geolocation", "industry"] if len(goodProperties) == 0 else goodProperties
     jsonResult = ask_wikidata({'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': wdid})
     f = open(wdid+'.txt', 'w'); f.write(pformat(jsonResult)); f.close();
     entry = jsonResult.get('entities', {}).get(wdid, None)
@@ -70,6 +70,8 @@ def insiderType(properties):
             return 'human'
         elif properties.get('geolocation', None) is not None:
             return 'loc'
+        if properties.get('industry', None) is not None:
+            return 'company'
     except:
         return ''
 
