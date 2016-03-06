@@ -18,7 +18,7 @@ def findEntity(entityText):
 def populateEntity(wdid, goodProperties=[]):
     goodProperties = ["contained", "wdType", "geolocation", "industry"] if len(goodProperties) == 0 else goodProperties
     jsonResult = ask_wikidata({'action': 'wbgetentities', 'languages': 'en', 'format': 'json', 'ids': wdid})
-    f = open(wdid+'.txt', 'w'); f.write(pformat(jsonResult)); f.close();
+    # f = open('wdata/'+wdid+'.txt', 'w'); f.write(pformat(jsonResult)); f.close();
     entry = jsonResult.get('entities', {}).get(wdid, None)
     if entry == None:
         return None

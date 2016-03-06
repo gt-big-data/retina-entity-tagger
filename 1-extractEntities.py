@@ -17,9 +17,7 @@ def bulkSave(arts, entitiesList):
     bulk.execute();
 
 def tagEntities():
-    global nlp
-    # articles = db.qdoc.find({ "reEnt": True }, no_cursor_timeout=True).sort('_id', -1)
-    articles = db.qdoc.find({ "$query": { "entities": { "$exists": False } }, "$orderby": { '_id' : -1 } }, no_cursor_timeout=True)
+    articles = db.qdoc.find({"entities": { "$exists": False }}, no_cursor_timeout=True).sort('_id', -1)
     spacy_parse_start = time.time();
     
     bulk = db.qdoc.initialize_unordered_bulk_op()

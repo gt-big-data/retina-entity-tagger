@@ -1,2 +1,3 @@
 *.pyc
 _gsdata_/
+.DS_Store
