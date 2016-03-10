@@ -8,7 +8,8 @@ global nlp, fullDict
 def loadWdidDict():
     di = {}
     for d in db.entities.find():
-        di[d['title']] = d['_id']
+        if 'title' in d:
+            di[d['title']] = d['_id']
         if d.get('aliases', []) is not None:
             for a in d.get('aliases', []):
                 di[a] = d['_id']
